@@ -1,6 +1,8 @@
 from PIL import Image, ImageDraw
 import numpy as np
 from scipy.ndimage import label, find_objects, gaussian_filter
+import os
+import time
 
 
 type Coordinate = tuple[int, int]
@@ -9,7 +11,10 @@ type Rectangle = tuple[Coordinate, Coordinate]
 type Color = tuple[int, int, int]
 
 
-def reduce_img(orig_img : Image.Image, num_colors : int = 8) -> Image.Image:
+NB_COLORS = 4
+
+
+def reduce_img(orig_img : Image.Image, num_colors : int = NB_COLORS) -> Image.Image:
     """
     Reduce the number of colors in an image to a specified number of colors.
     This is done by converting the image to a palette-based image with the specified number of colors.
@@ -56,7 +61,7 @@ def create_mask(image : Image.Image, bg_color : Color):
     bg_mask = np.all(img_array == bg_color, axis=-1)
       
     # blur the mask to remove small holes and noise
-    precision = 1
+    precision = 1.5
     bg_mask = gaussian_filter(bg_mask.astype(float), sigma=precision) > 0.5
 
     return bg_mask
@@ -72,7 +77,7 @@ def find_bounding_boxes(bg_mask : np.ndarray) -> list[Rectangle]:
     min_size = 1000  # Minimum size of the component to be considered a photo
     
     # Label connected components
-    labeled_array, num_features = label(~bg_mask)
+    labeled_array, num_features = label(~bg_mask) #type: ignore
     
     # Find bounding boxes for each connected component
     slices = find_objects(labeled_array)
@@ -116,12 +121,9 @@ def split_photos(image : Image.Image, rectangles : list[Rectangle]) -> list[Imag
     return photos
 
 
-def detect_images(image : Image.Image) -> tuple[list[Rectangle], Color]:
-    reduced_image = reduce_img(image, num_colors=4)
-    detected_bg_color = detect_bg_color(reduced_image)
-    mask = create_mask(reduced_image, detected_bg_color)
-
-    return find_bounding_boxes(mask), detected_bg_color
+def detect_images(image : Image.Image, bg_color : Color) -> list[Rectangle]:
+    mask = create_mask(image, bg_color)
+    return find_bounding_boxes(mask)
 
 
 def get_larger_rectangle(rectangles : list[Rectangle]) -> Rectangle:
@@ -135,7 +137,7 @@ def get_larger_rectangle(rectangles : list[Rectangle]) -> Rectangle:
     return max(rectangles, key=lambda rect: (rect[1][0] - rect[0][0]) * (rect[1][1] - rect[0][1]))
 
 
-def rotate_image(image : Image.Image, bg_color : Color) -> Image.Image:
+def rotate_image(image : Image.Image) -> Image.Image:
     """
     Rotate the image to the correct orientation.
     The correct orienation is the one closer to the original, where dimensions are the smallest.
@@ -144,12 +146,18 @@ def rotate_image(image : Image.Image, bg_color : Color) -> Image.Image:
     best_angle = 0
     best_area : Rectangle = ((0, 0), image.size)
     
+    reduced_image = reduce_img(image, num_colors=NB_COLORS)
+    bg_color = detect_bg_color(reduced_image)
+    
     for angle in range(-45, 46):
         # Rotate the image
-        rotated_image = image.rotate(angle, expand=True, fillcolor=bg_color)
+        rotated_image = reduced_image.rotate(angle, expand=True, fillcolor=bg_color)
         
         # Check if the rotated image is closer to the original dimensions
-        rectangle = get_larger_rectangle(detect_images(rotated_image)[0])
+        zones = detect_images(rotated_image, bg_color)
+        if not zones:
+            continue
+        rectangle = get_larger_rectangle(zones)
         
         if (rectangle[1][0] - rectangle[0][0]) * (rectangle[1][1] - rectangle[0][1]) < (best_area[1][0] - best_area[0][0]) * (best_area[1][1] - best_area[0][1]):
             best_angle = angle
@@ -164,32 +172,95 @@ def crop_image(image : Image.Image) -> Image.Image:
     Crop the image to the specified rectangle.
     Each rectangle is defined by its top-left and bottom-right corners.
     """
-    rectangle = get_larger_rectangle(detect_images(image)[0])
+    reduced_image = reduce_img(image, num_colors=NB_COLORS)
+    bg_color = detect_bg_color(reduced_image)
+    boxes = detect_images(reduced_image, bg_color)
+    rectangle = get_larger_rectangle(boxes)
     return image.crop((rectangle[0][0], rectangle[0][1], rectangle[1][0] + 1, rectangle[1][1] + 1))
         
-        
 
-  
-if __name__ == "__main__":
-    # Example usage
-    base_path = "images/origins/"
-    image_fullname = "image-1.jpg"
-    image = Image.open(f"{base_path}{image_fullname}")
+def is_same_size(image1 : Image.Image, image2 : Image.Image, threshold : float) -> bool:
+    """
+    Check if two images are the same size within a certain threshold.
+    The threshold is a percentage of the original image size (0-1).
+    """
+    width1, height1 = image1.size
+    width2, height2 = image2.size
     
-    print(f"Processing image: {image_fullname} - Size: {image.size}")
+    return abs(width1 - width2) <= width1 * threshold and abs(height1 - height2) <= height1 * threshold
     
-    image_name = image_fullname.split(".")[0]
+
+def is_monochrome(image : Image.Image) -> bool:
+    """
+    Check if the image is monochrome (i.e., all pixels are the same color within a certain tolerance).
+    """
+    img_array = np.array(image.convert("RGB"))
+    std_dev = np.std(img_array, axis=(0, 1))
+    # If the standard deviation is below a certain threshold, the image is considered monochrome
+    threshold = 25
+    return np.all(std_dev < threshold) == True # to convert from numpy.bool_ to bool
+
+
+def is_large_enough(image : Image.Image, min_size : int = 5000) -> bool:
+    """
+    Check if the image is large enough (i.e., width and height are above a certain threshold).
+    """
+    width, height = image.size
+    return width * height >= min_size
+
+
+
+def extract_photos(image: Image.Image, img_name : str, debug_dir: str) -> list[Image.Image]:
     
-    rectangles, bg_color = detect_images(image)
+    print(f"Processing image: {img_name} - Size: {image.size}")
+    
+    image_name = img_name.split(".")[0]
+    
+    reduced_image = reduce_img(image, num_colors=NB_COLORS)
+    reduced_image.convert('rgb').save(f"{debug_dir}{image_name}.reduced_image.jpg")
+    bg_color = detect_bg_color(reduced_image)
+    mask = create_mask(reduced_image, bg_color)
+    
+    mask_image = Image.fromarray((mask * 255).astype(np.uint8))
+    mask_image.save(f"{debug_dir}{image_name}.mask.jpg")
+    
+    rectangles = find_bounding_boxes(mask)
     print(f"Detected background color: {bg_color}")
 
     print(f"Detected {len(rectangles)} photos.")
     annotated_image = draw_rectangles(image, rectangles)
-    annotated_image.save(f"images/outputs/{image_name}.annotated_image.jpg")
+    annotated_image.save(f"{debug_dir}{image_name}.annotated_image.jpg")
 
     photos = split_photos(image, rectangles)
+    final_photos : list[Image.Image] = []
     for i, photo in enumerate(photos):
-        print(f"Processing photo {i + 1}/{len(photos)} - Size: {photo.size}")
-        photo = rotate_image(photo, bg_color)
+        if(is_same_size(photo, image, threshold=0.1)):
+            print(f"Skipping photo {i + 1}/{len(photos)} - Size: {photo.size} (same as original image)")
+            continue
+        if(not is_large_enough(photo)):
+            print(f"Skipping photo {i + 1}/{len(photos)} - Size: {photo.size} (too small)")
+            continue
+        print(f"Processing photo {i + 1}/{len(photos)} - Size: {photo.size}", end="", flush=True)
+        chrono = time.time()
+        photo.save(f"{debug_dir}{image_name}.{i + 1}.cropped.jpg")
+        photo = rotate_image(photo)
         photo = crop_image(photo)
-        photo.save(f"images/outputs/{image_name}.photo_{i + 1}.jpg")
+        if is_monochrome(photo):
+            print(f" - Skipping photo {i + 1}/{len(photos)} - Size: {photo.size} (monochrome)")
+            continue
+        # photo.save(f"{output_dir}{image_name}.{i + 1}.jpg")
+        final_photos.append(photo)
+        chrono = time.time() - chrono
+        print(f" - Done in {chrono:.2f}s ({photo.size[0]*photo.size[1]/(chrono*1000):.2f}px/ms)")
+
+    print(f"Extracted {len(final_photos)} photos from {img_name}.")
+    return final_photos
+
+
+
+if __name__ == "__main__":
+    IMG_NB = 4
+    
+    img = Image.open(f"images/origins/image-{IMG_NB}.jpg")
+    
+
