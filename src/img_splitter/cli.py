@@ -2,7 +2,7 @@ from PIL import Image
 import os
 import argparse
 
-from splitter import extract_photos
+from splitter import ImageSplitter
 
 
 def config_parser():
@@ -28,7 +28,8 @@ def main():
         os.makedirs(debug_dir)
     
     image = Image.open(image_path)
-    photos = extract_photos(image, image_name, debug_dir)
+    extractor = ImageSplitter(debug_dir=debug_dir)
+    photos = extractor.extract_photos(image, image_name)
     for i, photo in enumerate(photos):
         photo.save(f"{output_dir}{image_name.split('.')[0]}.{i + 1}.jpg")
     

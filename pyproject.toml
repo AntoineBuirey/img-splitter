@@ -5,6 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "config",
     "pillow>=12.3.0",
     "scikit-learn>=1.9.1",
+]
+
+[project.scripts]
+img-splitter = "img_splitter.__main__:main"
+
+[tool.uv.sources]
+config = { url = "https://github.com/AntoineBuirey/python-sample/releases/download/1.2.1/config-1.2.1-py3-none-any.whl" }
+
+[tool.uv.workspace]
+members = [
+    ".",
 ]
