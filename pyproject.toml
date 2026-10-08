@@ -13,6 +13,11 @@ dependencies = [
 [project.scripts]
 img-splitter = "img_splitter.__main__:main"
 
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.16.0",
+]
+
 [tool.uv.sources]
 config = { url = "https://github.com/AntoineBuirey/python-sample/releases/download/1.2.1/config-1.2.1-py3-none-any.whl" }
 

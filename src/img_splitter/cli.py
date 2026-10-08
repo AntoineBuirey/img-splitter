@@ -2,7 +2,7 @@ from PIL import Image
 import os
 import argparse
 
-from splitter import ImageSplitter
+from .splitter import ImageSplitter
 
 
 def config_parser():

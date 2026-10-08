@@ -3,12 +3,26 @@ import tkinter.ttk as ttk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 import os
+from pathlib import Path
+import shutil
+import sys
 from config import YAMLConfig as Config
 
 from .ImageSelector import ImageSelector
 from ..splitter import ImageSplitter
 
-DIRPATH = os.path.dirname(os.path.realpath(__file__))
+DIRPATH = Path(__file__).resolve().parent
+RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", DIRPATH.parents[2]))
+
+
+def get_config_path() -> Path:
+    """Return a writable per-user configuration path."""
+    config_dir = Path(os.environ.get("APPDATA", Path.home())) / "ImgSplitter"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config.yml"
+    if not config_path.exists():
+        shutil.copy2(RESOURCE_DIR / "config.yml", config_path)
+    return config_path
 
 
 def find_theme(name : str, themes_dir : str) -> str:
@@ -26,13 +40,14 @@ class ImageSplitterGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Image Splitter")
+        self.image: Image.Image | None = None
         
-        self.configuration = Config(os.path.join("config.yml"))
+        self.configuration = Config(str(get_config_path()))
         
-        themes_dir = os.path.join(DIRPATH, "theme")
+        themes_dir = str(DIRPATH / "theme")
         theme_file = find_theme(str(self.configuration.get("theme.name", "Azure-ttk-theme-2.1.0", True)), themes_dir)
         print(f"Using theme file: {theme_file}")
-        self.tk.call('source', os.path.join(themes_dir, theme_file))
+        self.tk.call('source', theme_file)
         self.tk.call('set_theme', self.configuration.get("theme.mode", "light", True))
         self.geometry("800x600")
         
