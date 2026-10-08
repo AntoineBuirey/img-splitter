@@ -1,3 +1,4 @@
 *.egg-info/
 images/
 *.pyc
+build/

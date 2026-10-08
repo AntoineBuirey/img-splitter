@@ -17,7 +17,11 @@ RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", DIRPATH.parents[2]))
 
 def get_config_path() -> Path:
     """Return a writable per-user configuration path."""
-    config_dir = Path(os.environ.get("APPDATA", Path.home())) / "ImgSplitter"
+    if os.name == "nt":
+        config_root = Path(os.environ.get("APPDATA", Path.home()))
+    else:
+        config_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    config_dir = config_root / "ImgSplitter"
     config_dir.mkdir(parents=True, exist_ok=True)
     config_path = config_dir / "config.yml"
     if not config_path.exists():
