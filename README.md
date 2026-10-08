@@ -40,3 +40,14 @@ Les réglages modifiés par l'utilisateur sont enregistrés dans
 `%APPDATA%\ImgSplitter\config.yml` sous Windows et
 `~/.config/ImgSplitter/config.yml` sous Linux, afin de rester persistants et
 accessibles en écriture.
+
+## Releases GitHub
+
+Lorsqu'une release GitHub est publiée, le workflow
+`.github/workflows/release.yml` compile automatiquement deux exécutables sur
+des runners natifs :
+
+- `img-splitter-windows-x86_64.exe`
+- `img-splitter-linux-x86_64`
+
+Les deux fichiers sont ajoutés automatiquement aux assets de la release.
