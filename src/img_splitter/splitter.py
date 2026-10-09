@@ -141,8 +141,7 @@ class ImageSplitter:
 
         for (top_left, bottom_right) in rectangles:
             # Crop the image to the bounding box
-            cropped_image = image.crop((top_left[0], top_left[1], bottom_right[0] + 1, bottom_right[1] + 1))
-            yield cropped_image
+            yield image.crop((top_left[0], top_left[1], bottom_right[0] + 1, bottom_right[1] + 1))
     
     
     def detect_images(self, image : Image.Image, bg_color : Color) -> list[Rectangle]:

@@ -95,6 +95,8 @@ class ImageSplitterGUI(tk.Tk):
         self.start_button.grid(row=2, column=0, columnspan=2, pady=10)
         
         self.progressbar = ttk.Progressbar(button_frame, orient="horizontal", length=400, mode="determinate")
+        self.progressbar.grid(row=3, column=0, columnspan=2, pady=10)
+        self.progressbar.grid_remove()  # Hide the progress bar initially
 
         # Create a canvas to display the image
         self.canvas = tk.Canvas(self, bg="gray")
@@ -144,7 +146,7 @@ class ImageSplitterGUI(tk.Tk):
 
         image_name = os.path.basename(self.image_path.get())
 
-        self.progressbar.grid(row=3, column=0, padx=5, pady=5, columnspan=2)
+        self.progressbar.grid()  # Show the progress bar
 
         try:
             self.photos = self.splitter.extract_photos(self.image, image_name, step_callback=self.update_progress)
@@ -159,7 +161,7 @@ class ImageSplitterGUI(tk.Tk):
         self.update_idletasks()
         
     def save_photos(self, images : list[Image.Image]):
-        self.progressbar.destroy()
+        self.progressbar.grid_remove()
         image_name = os.path.basename(self.image_path.get())
         for i, photo in enumerate(self.photos):
             photo.save(os.path.join(self.output_dir.get(), f"{image_name.split('.')[0]}.{i + 1}.jpg"))
