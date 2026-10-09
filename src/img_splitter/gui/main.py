@@ -53,7 +53,9 @@ class ImageSplitterGUI(tk.Tk):
         print(f"Using theme file: {theme_file}")
         self.tk.call('source', theme_file)
         self.tk.call('set_theme', self.configuration.get("theme.mode", "light", True))
-        self.geometry("800x600")
+        self.geometry("900x650")
+        self.minsize(500, 400)
+        self._display_job: str | None = None
         
         self.splitter = ImageSplitter(
             debug_dir=str(self.configuration.get("debug-directory", "", True)),
@@ -77,30 +79,31 @@ class ImageSplitterGUI(tk.Tk):
             print("No valid image path found in config. Please select an image.")
 
     def create_widgets(self):
-        # Create a frame for the buttons
-        button_frame = ttk.Frame(self)
-        button_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+        controls_frame = ttk.Frame(self)
+        controls_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
+        controls_frame.columnconfigure(0, weight=1)
 
-        image_path_field = ttk.Entry(button_frame, width=75, textvariable=self.image_path, state='readonly')
-        image_path_button = ttk.Button(button_frame, text="Select Image", command=self.load_image, width=20)
-        image_path_field.grid(row=0, column=0, padx=5, pady=5)
+        image_path_field = ttk.Entry(controls_frame, textvariable=self.image_path, state='readonly')
+        image_path_button = ttk.Button(controls_frame, text="Select Image", command=self.load_image)
+        image_path_field.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         image_path_button.grid(row=0, column=1, padx=5, pady=5)
         
-        output_dir_field = ttk.Entry(button_frame, width=75, textvariable=self.output_dir, state='readonly')
-        output_dir_button = ttk.Button(button_frame, text="Select Output Directory", command=self.select_output_directory, width=20)
-        output_dir_field.grid(row=1, column=0, padx=5, pady=5)
+        output_dir_field = ttk.Entry(controls_frame, textvariable=self.output_dir, state='readonly')
+        output_dir_button = ttk.Button(controls_frame, text="Select Output Directory", command=self.select_output_directory)
+        output_dir_field.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         output_dir_button.grid(row=1, column=1, padx=5, pady=5)
         
-        self.start_button = ttk.Button(button_frame, text="Split Image", command=self.split_image, width=20)
+        self.start_button = ttk.Button(controls_frame, text="Split Image", command=self.split_image)
         self.start_button.grid(row=2, column=0, columnspan=2, pady=10)
         
-        self.progressbar = ttk.Progressbar(button_frame, orient="horizontal", length=400, mode="determinate")
-        self.progressbar.grid(row=3, column=0, columnspan=2, pady=10)
+        self.progressbar = ttk.Progressbar(controls_frame, orient="horizontal", mode="determinate")
+        self.progressbar.grid(row=3, column=0, columnspan=2, sticky="ew", pady=10)
         self.progressbar.grid_remove()  # Hide the progress bar initially
 
         # Create a canvas to display the image
         self.canvas = tk.Canvas(self, bg="gray")
         self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.canvas.bind("<Configure>", self._schedule_image_display)
         
         
     def select_output_directory(self):
@@ -125,11 +128,31 @@ class ImageSplitterGUI(tk.Tk):
         self.canvas.update()
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
-        image.thumbnail((canvas_width, canvas_height))
+        if canvas_width <= 1 or canvas_height <= 1:
+            return
+
+        display_image = image.copy()
+        display_image.thumbnail((canvas_width, canvas_height))
         
         # Convert to PhotoImage and display on canvas
-        self.photo_image = ImageTk.PhotoImage(image)
-        self.canvas.create_image(canvas_width // 2, canvas_height // 2, image=self.photo_image, anchor=tk.CENTER)
+        self.photo_image = ImageTk.PhotoImage(display_image)
+        self.canvas.delete("image")
+        self.canvas.create_image(
+            canvas_width // 2,
+            canvas_height // 2,
+            image=self.photo_image,
+            anchor=tk.CENTER,
+            tags="image",
+        )
+
+    def _schedule_image_display(self, _event: tk.Event):
+        if self.image is not None and self._display_job is None:
+            self._display_job = self.after_idle(self._redisplay_image)
+
+    def _redisplay_image(self):
+        self._display_job = None
+        if self.image is not None:
+            self.display_image(self.image)
 
     def split_image(self):
         if not self.image:
@@ -152,6 +175,8 @@ class ImageSplitterGUI(tk.Tk):
             self.photos = self.splitter.extract_photos(self.image, image_name, step_callback=self.update_progress)
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred while splitting the image: {e}")
+            self.progressbar.grid_remove()
+            return
         
         ImageSelector(self, self.photos, callback=self.save_photos)
         
@@ -163,9 +188,9 @@ class ImageSplitterGUI(tk.Tk):
     def save_photos(self, images : list[Image.Image]):
         self.progressbar.grid_remove()
         image_name = os.path.basename(self.image_path.get())
-        for i, photo in enumerate(self.photos):
+        for i, photo in enumerate(images):
             photo.save(os.path.join(self.output_dir.get(), f"{image_name.split('.')[0]}.{i + 1}.jpg"))
-        messagebox.showinfo("Success", f"Extracted {len(self.photos)} photos from {image_name}.")
+        messagebox.showinfo("Success", f"Extracted {len(images)} photos from {image_name}.")
             
 if __name__ == "__main__":
     app = ImageSplitterGUI()
