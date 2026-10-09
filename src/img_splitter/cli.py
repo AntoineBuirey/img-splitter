@@ -31,7 +31,11 @@ def main():
     extractor = ImageSplitter(debug_dir=debug_dir)
     photos = extractor.extract_photos(image, image_name)
     for i, photo in enumerate(photos):
-        photo.save(f"{output_dir}{image_name.split('.')[0]}.{i + 1}.jpg")
+        photo.save(
+                os.path.join(output_dir, f"{image_name.split('.')[0]}.{i + 1}.jpg"),
+                quality=95,
+                subsampling=0,
+            )
     
 
 

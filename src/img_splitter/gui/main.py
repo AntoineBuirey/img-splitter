@@ -189,7 +189,11 @@ class ImageSplitterGUI(tk.Tk):
         self.progressbar.grid_remove()
         image_name = os.path.basename(self.image_path.get())
         for i, photo in enumerate(images):
-            photo.save(os.path.join(self.output_dir.get(), f"{image_name.split('.')[0]}.{i + 1}.jpg"))
+            photo.save(
+                os.path.join(self.output_dir.get(), f"{image_name.split('.')[0]}.{i + 1}.jpg"),
+                quality=95,
+                subsampling=0,
+            )
         messagebox.showinfo("Success", f"Extracted {len(images)} photos from {image_name}.")
             
 if __name__ == "__main__":

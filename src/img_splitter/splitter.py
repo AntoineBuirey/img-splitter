@@ -1,4 +1,5 @@
 from PIL import Image, ImageDraw
+from .quality import upgrade_image_quality
 import numpy as np
 from scipy.ndimage import label, find_objects, gaussian_filter
 import time
@@ -186,7 +187,12 @@ class ImageSplitter:
                 best_area = rectangle
                 
         # Rotate the image to the best angle
-        return image.rotate(best_angle, expand=True, fillcolor=bg_color)
+        return image.rotate(
+            best_angle,
+            resample=Image.Resampling.BICUBIC,
+            expand=True,
+            fillcolor=bg_color,
+        )
 
     def crop_image(self, image : Image.Image) -> Image.Image:
         """
@@ -274,6 +280,7 @@ class ImageSplitter:
                     step_callback(i + 1, nb_photos)
                 continue
 
+            photo = upgrade_image_quality(photo)
             final_photos.append(photo)
             chrono = time.time() - chrono
             print(f" - Done in {chrono:.2f}s ({photo.size[0]*photo.size[1]/(chrono*1000):.2f}px/ms)")
