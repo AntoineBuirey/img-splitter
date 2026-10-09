@@ -1,0 +1,17 @@
+<translations>
+    <entry key="title">Séparateur d'images</entry>
+    <entry key="warning">Avertissement</entry>
+    <entry key="image_load_fail">Impossible de charger l'image : {}</entry>
+    <entry key="select_image">Sélectionner une image</entry>
+    <entry key="select_outdir">Sélectionner le répertoire de sortie</entry>
+    <entry key="split_image">Séparer l'image</entry>
+    <entry key="image_files">Images</entry>
+    <entry key="error">Erreur</entry>
+    <entry key="no_image">Aucune image chargée.</entry>
+    <entry key="image_load_fail">Une erreur s'est produite lors de la séparation de l'image : {}</entry>
+    <entry key="success">Succès</entry>
+    <entry key="extracted_n_from_x">{} photos extraites de {}.</entry>
+    <entry key="image_selector_title">Sélectionner des images</entry>
+    <entry key="discard">Jeter</entry>
+    <entry key="keep">Garder</entry>
+</translations>

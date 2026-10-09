@@ -6,17 +6,18 @@ from typing import Any, Callable
 
 class ImageSelector(tk.Toplevel):
     """allow to select images that will be kept and which will be discarded."""
-    def __init__(self, parent, images : list[Image.Image], callback : Callable[[list[Image.Image]], Any]|None = None):
+    def __init__(self, parent, images : list[Image.Image], translator : Callable[[str], str], callback : Callable[[list[Image.Image]], Any]|None = None):
         super().__init__(parent)
         self.parent = parent
         self.images = images
         self.current_index = 0
         self.selected_images = []
         self.callback = callback
+        self.translator = translator
         
         self.protocol("WM_DELETE_WINDOW", self.finish_selection)
 
-        self.title("Select Images")
+        self.title(self.translator("image_selector_title"))
         self.geometry("600x500")
         self.minsize(320, 280)
         self._display_job: str | None = None
@@ -28,10 +29,10 @@ class ImageSelector(tk.Toplevel):
         button_frame = ttk.Frame(self)
         button_frame.pack(side=tk.BOTTOM, padx=10, pady=10)
 
-        self.discard_button = ttk.Button(button_frame, text="Discard", command=self.discard_image)
+        self.discard_button = ttk.Button(button_frame, text=self.translator("discard"), command=self.discard_image)
         self.discard_button.grid(row=0, column=0, padx=5)
 
-        self.keep_button = ttk.Button(button_frame, text="Keep", command=self.keep_image)
+        self.keep_button = ttk.Button(button_frame, text=self.translator("keep"), command=self.keep_image)
         self.keep_button.grid(row=0, column=1, padx=5)
 
         self.image_frame = ttk.Frame(self)
@@ -91,7 +92,15 @@ if __name__ == "__main__":
         print(f"Selected {len(selected_images)} images.")
         root.quit()
 
+    def dummy_translator(key: str) -> str:
+        translations = {
+            "image_selector_title": "Image Selector",
+            "discard": "Discard",
+            "keep": "Keep"
+        }
+        return translations.get(key, key)
+
     # Example usage with dummy images
     dummy_images = [Image.new('RGB', (100, 100), color) for color in ['red', 'green', 'blue']]
-    selector = ImageSelector(root, dummy_images, callback=on_selection_complete)
+    selector = ImageSelector(root, dummy_images, dummy_translator, callback=on_selection_complete)
     root.mainloop()

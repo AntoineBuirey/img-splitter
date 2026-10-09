@@ -1,0 +1,17 @@
+<translations>
+    <entry key="title">Image Splitter</entry>
+    <entry key="warning">Warning</entry>
+    <entry key="image_load_fail">Failed to load image: {}</entry>
+    <entry key="select_image">Select Image</entry>
+    <entry key="select_outdir">Select Output Directory</entry>
+    <entry key="split_image">Split Image</entry>
+    <entry key="image_files">Image files</entry>
+    <entry key="error">Error</entry>
+    <entry key="no_image">No image loaded.</entry>
+    <entry key="image_load_fail">An error occurred while splitting the image: {}</entry>
+    <entry key="success">Success</entry>
+    <entry key="extracted_n_from_x">Extracted {} photos from {}.</entry>
+    <entry key="image_selector_title">Select Images</entry>
+    <entry key="discard">Discard</entry>
+    <entry key="keep">Keep</entry>
+</translations>

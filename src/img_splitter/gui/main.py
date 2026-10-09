@@ -10,6 +10,7 @@ from config import YAMLConfig as Config
 
 from .ImageSelector import ImageSelector
 from ..splitter import ImageSplitter
+from .translation import Translator
 
 DIRPATH = Path(__file__).resolve().parent
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", DIRPATH.parents[2]))
@@ -43,10 +44,13 @@ def find_theme(name : str, themes_dir : str) -> str:
 class ImageSplitterGUI(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Image Splitter")
+        self.configuration = Config(str(get_config_path()))
+        self.translator = Translator(str(DIRPATH / "translations"))
+        self.translator.set_language(str(self.configuration.get("language", "fr", True)))
+        
+        self.title(self.translator("title"))
         self.image: Image.Image | None = None
         
-        self.configuration = Config(str(get_config_path()))
         
         themes_dir = str(DIRPATH / "theme")
         theme_file = find_theme(str(self.configuration.get("theme.name", "Azure-ttk-theme-2.1.0", True)), themes_dir)
@@ -74,7 +78,10 @@ class ImageSplitterGUI(tk.Tk):
                 self.image = Image.open(self.image_path.get())
                 self.display_image(self.image)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load image: {e}")
+                messagebox.showwarning(
+                    self.translator("warning"),
+                    self.translator("image_load_fail").format(e),
+                )
         else:
             print("No valid image path found in config. Please select an image.")
 
@@ -84,16 +91,16 @@ class ImageSplitterGUI(tk.Tk):
         controls_frame.columnconfigure(0, weight=1)
 
         image_path_field = ttk.Entry(controls_frame, textvariable=self.image_path, state='readonly')
-        image_path_button = ttk.Button(controls_frame, text="Select Image", command=self.load_image)
+        image_path_button = ttk.Button(controls_frame, text=self.translator("select_image"), command=self.load_image)
         image_path_field.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         image_path_button.grid(row=0, column=1, padx=5, pady=5)
         
         output_dir_field = ttk.Entry(controls_frame, textvariable=self.output_dir, state='readonly')
-        output_dir_button = ttk.Button(controls_frame, text="Select Output Directory", command=self.select_output_directory)
+        output_dir_button = ttk.Button(controls_frame, text=self.translator("select_outdir"), command=self.select_output_directory)
         output_dir_field.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         output_dir_button.grid(row=1, column=1, padx=5, pady=5)
         
-        self.start_button = ttk.Button(controls_frame, text="Split Image", command=self.split_image)
+        self.start_button = ttk.Button(controls_frame, text=self.translator("split_image"), command=self.split_image)
         self.start_button.grid(row=2, column=0, columnspan=2, pady=10)
         
         self.progressbar = ttk.Progressbar(controls_frame, orient="horizontal", mode="determinate")
@@ -113,7 +120,7 @@ class ImageSplitterGUI(tk.Tk):
             self.configuration.set("output-directory", directory)
 
     def load_image(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.png")])
+        file_path = filedialog.askopenfilename(filetypes=[(self.translator("image_files"), "*.jpg *.jpeg *.png")])
         if file_path:
             self.image_path.set(file_path)
             self.configuration.set("image-path", file_path)
@@ -121,7 +128,10 @@ class ImageSplitterGUI(tk.Tk):
                 self.image = Image.open(file_path)
                 self.display_image(self.image)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to load image: {e}")
+                messagebox.showwarning(
+                    self.translator("warning"),
+                    self.translator("image_load_fail").format(e),
+                )
 
     def display_image(self, image : Image.Image):
         # Resize image to fit the canvas while maintaining aspect ratio
@@ -155,12 +165,8 @@ class ImageSplitterGUI(tk.Tk):
             self.display_image(self.image)
 
     def split_image(self):
-        if not self.image:
-            messagebox.showerror("Error", "No image loaded.")
-            return
-    
-        if self.image_path is None:
-            messagebox.showerror("Error", "No image path available.")
+        if not self.image or self.image_path is None:
+            messagebox.showerror(self.translator("error"), self.translator("no_image"))
             return
         
         debug_dir = str(self.configuration.get("debug-directory", "", True))
@@ -174,11 +180,15 @@ class ImageSplitterGUI(tk.Tk):
         try:
             self.photos = self.splitter.extract_photos(self.image, image_name, step_callback=self.update_progress)
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred while splitting the image: {e}")
+            messagebox.showerror(self.translator("error"), self.translator("image_load_fail").format(e))
             self.progressbar.grid_remove()
             return
         
-        ImageSelector(self, self.photos, callback=self.save_photos)
+        ImageSelector(self,
+                      self.photos,
+                      callback=self.save_photos,
+                      translator=self.translator
+                    )
         
     def update_progress(self, current: int, total: int):
         self.progressbar["maximum"] = total
@@ -194,7 +204,10 @@ class ImageSplitterGUI(tk.Tk):
                 quality=95,
                 subsampling=0,
             )
-        messagebox.showinfo("Success", f"Extracted {len(images)} photos from {image_name}.")
+        messagebox.showinfo(
+            self.translator("success"),
+            self.translator("extracted_n_from_x").format(len(images), image_name)
+        )
             
 if __name__ == "__main__":
     app = ImageSplitterGUI()
