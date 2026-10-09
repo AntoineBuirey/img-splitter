@@ -6,10 +6,13 @@ from PyInstaller.utils.hooks import collect_all
 
 project_dir = Path(SPECPATH)
 datas = [
-    (str(project_dir / "config.yml"), "."),
     (
         str(project_dir / "src" / "img_splitter" / "gui" / "theme"),
         "img_splitter/gui/theme",
+    ),
+    (
+        str(project_dir / "src" / "img_splitter" / "gui" / "translations"),
+        "img_splitter/gui/translations",
     ),
 ]
 

@@ -6,8 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "config",
+    "numpy>=2.5.3",
     "pillow>=12.3.0",
-    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
 ]
 
 [project.scripts]
