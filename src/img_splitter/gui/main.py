@@ -25,8 +25,6 @@ def get_config_path() -> Path:
     config_dir = config_root / "ImgSplitter"
     config_dir.mkdir(parents=True, exist_ok=True)
     config_path = config_dir / "config.yml"
-    if not config_path.exists():
-        shutil.copy2(RESOURCE_DIR / "config.yml", config_path)
     return config_path
 
 
