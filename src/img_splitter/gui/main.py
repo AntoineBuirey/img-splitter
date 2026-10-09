@@ -67,7 +67,7 @@ class ImageSplitterGUI(tk.Tk):
             min_size=int(self.configuration.get("algorithm.minimum-size", 5000, True))
         )
         
-        self.output_dir = tk.StringVar(self, str(self.configuration.get("output-directory")))
+        self.output_dir = tk.StringVar(self, str(self.configuration.get("output-directory", "")))
         self.image_path = tk.StringVar(self, str(self.configuration.get("image-path", "")))
         self.create_widgets()
 
